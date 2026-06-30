@@ -13,21 +13,21 @@
 
     <main class="home__main">
       <div v-if="!image && !loading" class="options">
-        <div v-if="isNative" class="option" @click="fromCamera">
+        <button class="option option--primary" type="button" @click="startCameraScan">
           <div class="option__icon"><van-icon name="scan" /></div>
           <p class="option__title">扫描文件</p>
           <p class="option__sub">拍照扫描文档</p>
-        </div>
-        <div class="option" @click="triggerPick">
+        </button>
+        <button class="option" type="button" @click="triggerAlbumPick">
           <div class="option__icon"><van-icon name="description" /></div>
           <p class="option__title">文档扫描</p>
           <p class="option__sub">从相册选择图片</p>
-        </div>
-        <div class="option" @click="goIdCard">
+        </button>
+        <button class="option" type="button" @click="goIdCard">
           <div class="option__icon option__icon--id"><van-icon name="credit-pay" /></div>
           <p class="option__title">身份证扫描</p>
           <p class="option__sub">正反面合成扫描件</p>
-        </div>
+        </button>
       </div>
 
       <div v-else-if="loading" class="home__loading">
@@ -46,11 +46,11 @@
 
     <footer class="home__footer">
       <p v-if="error" class="home__error">{{ error }}</p>
-      <p class="home__tip">提示：先拍照或截屏，再从相册选择</p>
+      <p class="home__tip">文件仅在当前设备处理，不会上传服务器</p>
     </footer>
 
     <input
-      ref="fileInputRef"
+      ref="albumInputRef"
       type="file"
       accept="image/*"
       class="home__file-input"
@@ -60,48 +60,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useImagePicker } from '@/composables/useImagePicker'
 import { useScanStore } from '@/store/scan'
 import { formatSize, loadImage } from '@/utils/image'
-import { useCapture } from '@/composables/useCapture'
-import { Capacitor } from '@capacitor/core'
+import { useCameraCapture } from '@/composables/useCameraCapture'
 
 const router = useRouter()
 const store = useScanStore()
-const fileInputRef = ref<HTMLInputElement | null>(null)
+const albumInputRef = ref<HTMLInputElement | null>(null)
 const { image, loading, error, loadFile } = useImagePicker()
-const capture = useCapture()
-// 「扫描文件」(摄像头) 只在 App 里出现；H5 不放摄像头入口，避免任何摄像头报错
-const isNative = Capacitor.isNativePlatform()
+const camera = useCameraCapture()
+
+onMounted(() => {
+  camera.reset()
+})
+
+/** 扫描文件：点击后打开全屏摄像头取景层，像扫一扫一样扫描文件 */
+function startCameraScan(): void {
+  void fromCamera()
+}
 
 /** 文档扫描：从相册选图 */
-function triggerPick(): void {
-  fileInputRef.value?.click()
+function triggerAlbumPick(): void {
+  albumInputRef.value?.click()
 }
 
 function goIdCard(): void {
   router.push('/idcard')
 }
 
-/** 扫描文件：H5 走系统相机、App 走自定义扫描界面，不会弹"未找到摄像头" */
 async function fromCamera(): Promise<void> {
-  const dataUrl = await capture.takePhoto()
+  const dataUrl = await camera.open()
   if (!dataUrl) return
   try {
-    const img = await loadImage(dataUrl)
-    store.reset()
-    store.setImage({
-      dataUrl,
-      url: dataUrl,
-      width: img.naturalWidth,
-      height: img.naturalHeight,
-    })
-    router.push('/edit')
+    await enterEditWithDataUrl(dataUrl)
   } catch {
     /* 忽略 */
   }
+}
+
+async function enterEditWithDataUrl(dataUrl: string): Promise<void> {
+  const img = await loadImage(dataUrl)
+  store.reset()
+  store.setImage({
+    dataUrl,
+    url: dataUrl,
+    width: img.naturalWidth,
+    height: img.naturalHeight,
+  })
+  router.push('/edit')
 }
 
 async function onFileChange(e: Event): Promise<void> {
@@ -194,20 +203,27 @@ async function onFileChange(e: Event): Promise<void> {
   gap: 14px;
 }
 .option {
+  border: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  min-height: 142px;
   padding: 28px 14px;
   border-radius: var(--ss-radius-lg);
   background: var(--ss-surface);
   box-shadow: var(--ss-shadow-card);
   color: var(--ss-text);
   cursor: pointer;
+  font-family: inherit;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
+}
+.option--primary {
+  grid-column: 1 / -1;
+  min-height: 154px;
 }
 .option:active {
   transform: scale(0.97);
@@ -288,6 +304,11 @@ async function onFileChange(e: Event): Promise<void> {
   text-align: center;
 }
 .home__file-input {
-  display: none;
+  position: fixed;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 </style>

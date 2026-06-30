@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { loadImage } from './image'
+import { downloadBlob } from './files'
 
 /**
  * 单张图片导出为 PDF（A4，按比例居中）
@@ -43,7 +44,7 @@ export async function exportImageToPdf(
   // 重新编码为 0.85 JPEG，统一质量并降低体积
   const jpeg = await reencodeJpeg(img, 0.85)
   doc.addImage(jpeg, 'JPEG', x, y, w, h)
-  doc.save(filename)
+  await downloadBlob(doc.output('blob'), filename)
 }
 
 /** 直接导出图片文件（PNG/JPEG 原样落盘） */
@@ -52,7 +53,7 @@ export async function exportImageFile(
   filename = `scan-treasure-${stamp()}.jpg`,
 ): Promise<void> {
   const blob = dataUrlToBlob(dataUrl)
-  await triggerDownload(blob, filename)
+  await downloadBlob(blob, filename)
 }
 
 /** 把 dataURL 转 Blob */
@@ -77,21 +78,6 @@ async function reencodeJpeg(
   if (!ctx) throw new Error('canvas 2d 上下文不可用')
   ctx.drawImage(img, 0, 0)
   return canvas.toDataURL('image/jpeg', quality)
-}
-
-function triggerDownload(blob: Blob, filename: string): Promise<void> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    // 释放 objectURL，给浏览器写入文件的时间
-    setTimeout(() => URL.revokeObjectURL(url), 1500)
-    resolve()
-  })
 }
 
 function stamp(): string {

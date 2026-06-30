@@ -11,3 +11,7 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
+
+# Local Android SDK used for command-line APK builds
+android-sdk/
+android-sdk-downloads/

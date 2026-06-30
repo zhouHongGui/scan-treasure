@@ -56,7 +56,7 @@ function fail(text: string, sub: string): void {
 
 onMounted(async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
-    fail('当前环境不支持摄像头', '网页需在 HTTPS 或 localhost 下打开。')
+    fail('当前环境不支持摄像头', '请使用 HTTPS 网页、localhost 或 App 打开后再扫描。')
     return
   }
   try {
@@ -82,7 +82,7 @@ onMounted(async () => {
         '本设备可能没有摄像头，或正被占用。请在带摄像头的设备上使用（手机可用 HTTPS 网页或 App 扫描）。',
       )
     } else if (name === 'NotAllowedError' || name === 'SecurityError') {
-      fail('摄像头权限被拒绝', '请允许摄像头权限；网页需在 HTTPS 或 localhost 下打开。')
+      fail('摄像头权限被拒绝', '请在浏览器或系统权限设置中允许摄像头访问后重试。')
     } else if (name === 'NotReadableError') {
       fail('摄像头被占用', '请关闭其它正在使用摄像头的程序后重试。')
     } else {
