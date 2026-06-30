@@ -145,7 +145,7 @@ import {
 import { compressToDataUrl } from '@/utils/image'
 import { fullImageCorners, type Corner } from '@/utils/geometry'
 import { exportImageToPdf, exportImageFile } from '@/utils/pdf'
-import { useCameraCapture } from '@/composables/useCameraCapture'
+import { useCapture } from '@/composables/useCapture'
 import CornerCanvas from '@/components/CornerCanvas.vue'
 
 type Step = 'front' | 'back' | 'result'
@@ -165,7 +165,7 @@ const MODES: { value: EnhanceMode; label: string }[] = [
 
 const router = useRouter()
 const client = useImageClient()
-const camera = useCameraCapture()
+const capture = useCapture()
 
 const pickSheet = ref(false)
 const pickActions: ActionSheetAction[] = [{ name: '拍照' }, { name: '从相册选择' }]
@@ -231,7 +231,7 @@ async function loadSide(dataUrl: string): Promise<void> {
 }
 
 async function fromCamera(): Promise<void> {
-  const dataUrl = await camera.open()
+  const dataUrl = await capture.takePhoto()
   if (!dataUrl) return
   try {
     await loadSide(dataUrl)
