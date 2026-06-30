@@ -44,6 +44,20 @@
       </div>
     </main>
 
+    <aside v-if="showPromo" class="promo">
+      <a class="promo__link" :href="PROMO_URL" target="_blank" rel="noopener noreferrer">
+        <span class="promo__icon"><van-icon name="gift-o" /></span>
+        <span class="promo__text">
+          <strong>办卡福利 <em>推广</em></strong>
+          <small>移动 / 电信 大流量号卡，在线申请、包邮到家</small>
+        </span>
+        <span class="promo__cta">去办理 <van-icon name="arrow" /></span>
+      </a>
+      <button class="promo__close" type="button" aria-label="关闭推广" @click="dismissPromo">
+        <van-icon name="cross" />
+      </button>
+    </aside>
+
     <footer class="home__footer">
       <p v-if="error" class="home__error">{{ error }}</p>
       <p class="home__tip">文件仅在当前设备处理，不会上传服务器</p>
@@ -72,6 +86,19 @@ const store = useScanStore()
 const albumInputRef = ref<HTMLInputElement | null>(null)
 const { image, loading, error, loadFile } = useImagePicker()
 const camera = useCameraCapture()
+
+// 自有店铺推广（办卡）：点击新标签打开；可关闭，关闭状态仅记本地、不上传
+const PROMO_URL = 'https://hklingqu.chshebei.cn/ProductEn/Index/01190a6b967b8267'
+const PROMO_DISMISS_KEY = 'scan-treasure:promo-dismissed'
+const showPromo = ref(!localStorage.getItem(PROMO_DISMISS_KEY))
+function dismissPromo(): void {
+  showPromo.value = false
+  try {
+    localStorage.setItem(PROMO_DISMISS_KEY, '1')
+  } catch {
+    /* 无痕模式等不可写时忽略 */
+  }
+}
 
 onMounted(() => {
   camera.reset()
@@ -303,6 +330,90 @@ async function onFileChange(e: Event): Promise<void> {
   margin-top: 12px;
   text-align: center;
 }
+.promo {
+  position: relative;
+  max-width: 460px;
+  margin: 4px auto 14px;
+  border-radius: var(--ss-radius-lg);
+  border: 1px solid #ffd7bf;
+  background: linear-gradient(135deg, #fff6f0, #ffffff);
+  box-shadow: 0 6px 18px rgba(255, 122, 69, 0.14);
+  overflow: hidden;
+}
+.promo__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 46px 14px 14px;
+  color: var(--ss-text);
+  text-decoration: none;
+}
+.promo__icon {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ff8a4c, #ff5a3c);
+  color: #fff;
+  font-size: 22px;
+}
+.promo__text {
+  flex: 1;
+  min-width: 0;
+}
+.promo__text strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.promo__text strong em {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--ss-radius-pill);
+  background: #ffe3d3;
+  color: #e0571a;
+  font-weight: 600;
+}
+.promo__text small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ss-text-light);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.promo__cta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 13px;
+  border-radius: var(--ss-radius-pill);
+  background: linear-gradient(135deg, #ff8a4c, #ff5a3c);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.promo__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ss-text-light);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .home__file-input {
   position: fixed;
   left: -9999px;
