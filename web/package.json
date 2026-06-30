@@ -1,0 +1,34 @@
+{
+  "name": "scan-treasure",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "扫描宝 Scan Treasure - 开源文档/证件扫描 H5（纯前端、无服务器）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "npm run build && cap sync android && cap open android",
+    "gen:icons": "node scripts/gen-icons.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "jspdf": "2.5",
+    "pinia": "^2.3.1",
+    "vant": "^4.8.7",
+    "vue": "^3.4.21",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "postcss-px-to-viewport-8-plugin": "^1.2.5",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10",
+    "vue-tsc": "^2.0.13"
+  }
+}

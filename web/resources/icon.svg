@@ -1,0 +1,32 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b9bff"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c9d8fb"/>
+      <stop offset="1" stop-color="#dde7fd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 圆角方背景（品牌蓝渐变） -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#bg)"/>
+
+  <!-- 文档卡 -->
+  <rect x="352" y="300" width="320" height="424" rx="40" ry="40" fill="#ffffff"/>
+  <!-- 文字行 -->
+  <rect x="400" y="384" width="224" height="34" rx="17" fill="url(#line)"/>
+  <rect x="400" y="458" width="168" height="24" rx="12" fill="#e2eafd"/>
+  <rect x="400" y="514" width="212" height="24" rx="12" fill="#e2eafd"/>
+  <rect x="400" y="570" width="150" height="24" rx="12" fill="#e2eafd"/>
+  <rect x="400" y="626" width="186" height="24" rx="12" fill="#e2eafd"/>
+
+  <!-- 四角扫描框（白色 L 形） -->
+  <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="260,360 260,260 360,260"/>
+    <polyline points="664,260 764,260 764,360"/>
+    <polyline points="260,664 260,764 360,764"/>
+    <polyline points="664,764 764,764 764,664"/>
+  </g>
+</svg>

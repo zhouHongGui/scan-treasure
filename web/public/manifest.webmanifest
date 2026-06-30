@@ -1,0 +1,17 @@
+{
+  "name": "扫描宝 · Scan Treasure",
+  "short_name": "扫描宝",
+  "description": "开源文档/证件扫描工具，纯本地处理，图片不上传",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2f6fed",
+  "theme_color": "#2f6fed",
+  "icons": [
+    { "src": "pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

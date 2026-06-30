@@ -1,0 +1,19 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*
+
+# Capacitor Android：保留原生工程源码，忽略构建产物与本地配置
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+*.keystore
+!debug.keystore
