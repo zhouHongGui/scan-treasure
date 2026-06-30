@@ -48,8 +48,8 @@
       <a class="promo__link" :href="PROMO_URL" target="_blank" rel="noopener noreferrer">
         <span class="promo__icon"><van-icon name="gift-o" /></span>
         <span class="promo__text">
-          <strong>办卡福利 <em>推广</em></strong>
-          <small>移动 / 电信 大流量号卡，在线申请、包邮到家</small>
+          <strong><span class="promo__price">19元</span> 享 250GB 大流量 <em>推广</em></strong>
+          <small>移动 / 电信 号卡 · 在线申请、包邮到家</small>
         </span>
         <span class="promo__cta">去办理 <van-icon name="arrow" /></span>
       </a>
@@ -368,6 +368,11 @@ async function onFileChange(e: Event): Promise<void> {
   align-items: center;
   gap: 6px;
   font-size: 14px;
+}
+.promo__price {
+  color: #ff5a3c;
+  font-weight: 800;
+  font-size: 16px;
 }
 .promo__text strong em {
   font-style: normal;
