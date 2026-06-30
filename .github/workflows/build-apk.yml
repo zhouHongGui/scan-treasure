@@ -1,0 +1,49 @@
+# 云打包：在 GitHub 的 Linux runner 上编译 Android debug APK，免本机装 SDK。
+# 用法：push 到 master（或 Actions 页手动 Run workflow）→ 构建完成在该 run 页面下载 APK 制品。
+name: Build Android APK
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build web + sync into Android
+        working-directory: web
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-treasure-debug-apk
+          path: web/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
