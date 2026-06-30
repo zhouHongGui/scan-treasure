@@ -13,7 +13,7 @@
 
     <main class="home__main">
       <div v-if="!image && !loading" class="options">
-        <div class="option" @click="fromCamera">
+        <div v-if="isNative" class="option" @click="fromCamera">
           <div class="option__icon"><van-icon name="scan" /></div>
           <p class="option__title">扫描文件</p>
           <p class="option__sub">拍照扫描文档</p>
@@ -66,12 +66,15 @@ import { useImagePicker } from '@/composables/useImagePicker'
 import { useScanStore } from '@/store/scan'
 import { formatSize, loadImage } from '@/utils/image'
 import { useCapture } from '@/composables/useCapture'
+import { Capacitor } from '@capacitor/core'
 
 const router = useRouter()
 const store = useScanStore()
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const { image, loading, error, loadFile } = useImagePicker()
 const capture = useCapture()
+// 「扫描文件」(摄像头) 只在 App 里出现；H5 不放摄像头入口，避免任何摄像头报错
+const isNative = Capacitor.isNativePlatform()
 
 /** 文档扫描：从相册选图 */
 function triggerPick(): void {
