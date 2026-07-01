@@ -66,9 +66,20 @@ npm run package:all
 
 触发规则：
 
-- push 到 `main` / `master`：自动打包，下载入口在 GitHub Actions 当前 run 的 Artifacts。
-- 手动执行 `Build App Downloads`：自动打包，下载入口同样在 Artifacts。
-- push `v*` 标签：自动打包并创建 / 更新 GitHub Release，下载入口在 Releases 页面。
+- push 到 `main` / `master`：自动打包并更新 `latest` GitHub Release，下载入口在 Releases 页面，可直接点击安装包下载。
+- 手动执行 `Build App Downloads`：自动打包并更新 `latest` GitHub Release，下载入口同样在 Releases 页面。
+- push `v*` 标签：自动打包并创建 / 更新对应版本 GitHub Release，下载入口在 Releases 页面。
+
+最新构建直链：
+
+```text
+https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk
+https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk
+https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap
+https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa
+```
+
+说明：当前仓库只有 Android 原生工程，因此 `scan-treasure-android-debug.apk` 会优先可用。Android release、HarmonyOS、iOS 需要对应签名材料或原生工程补齐后才会生成真实安装包。
 
 发布一个带下载链接的版本：
 
@@ -77,7 +88,11 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-GitHub 会在 Releases 页面生成 `v0.1.0`，并挂载本次构建产物。
+GitHub 会在 Releases 页面生成 `v0.1.0`，并挂载本次构建产物。版本包的直链格式如下：
+
+```text
+https://github.com/zhouHongGui/scan-treasure/releases/download/v0.1.0/scan-treasure-android-debug.apk
+```
 
 ## Android Release 签名
 
@@ -175,6 +190,6 @@ HARMONY_WEB_DIST_DIR
 
 1. 本地开发完成后，执行 `npm run type-check` 和 `npm run build`。
 2. 如需本地确认 Android 包，执行 `.\scripts\package-android.ps1 -Variant Debug`。
-3. push 到 `main` / `master`，GitHub Actions 自动生成临时下载产物。
+3. push 到 `main` / `master`，GitHub Actions 自动更新 `latest` Release，用户可直接下载最新安装包。
 4. 确认功能无问题后打版本标签，例如 `v0.1.0`。
 5. GitHub Releases 自动生成正式下载入口。

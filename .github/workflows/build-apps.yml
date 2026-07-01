@@ -1,6 +1,6 @@
 # Build app packages for GitHub downloads.
-# - Push to main/master: packages are available in the workflow run artifacts.
-# - Push a tag like v1.0.0: packages are uploaded to a GitHub Release.
+# - Push to main/master: packages are uploaded to the "latest" GitHub Release.
+# - Push a tag like v1.0.0: packages are uploaded to that versioned GitHub Release.
 name: Build App Downloads
 
 on:
@@ -280,29 +280,108 @@ jobs:
   github-release:
     name: GitHub Release downloads
     needs: [android, harmony, ios]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: release-artifacts
 
+      - name: Prepare stable download assets
+        run: |
+          mkdir -p release-upload
+
+          debug_apk="$(find release-artifacts -type f -name "*debug*.apk" | head -n 1 || true)"
+          if [ -n "$debug_apk" ]; then
+            cp "$debug_apk" release-upload/scan-treasure-android-debug.apk
+          fi
+
+          release_apk="$(find release-artifacts -type f -name "*release*.apk" ! -name "*unsigned*" | head -n 1 || true)"
+          if [ -n "$release_apk" ]; then
+            cp "$release_apk" release-upload/scan-treasure-android-release.apk
+          fi
+
+          release_aab="$(find release-artifacts -type f -name "*release*.aab" | head -n 1 || true)"
+          if [ -n "$release_aab" ]; then
+            cp "$release_aab" release-upload/scan-treasure-android-release.aab
+          fi
+
+          ios_ipa="$(find release-artifacts -type f -name "*.ipa" | head -n 1 || true)"
+          if [ -n "$ios_ipa" ]; then
+            cp "$ios_ipa" release-upload/scan-treasure-ios.ipa
+          fi
+
+          harmony_hap="$(find release-artifacts -type f -name "*.hap" | head -n 1 || true)"
+          if [ -n "$harmony_hap" ]; then
+            cp "$harmony_hap" release-upload/scan-treasure-harmony.hap
+          fi
+
+          harmony_app="$(find release-artifacts -type f -name "*.app" | head -n 1 || true)"
+          if [ -n "$harmony_app" ]; then
+            cp "$harmony_app" release-upload/scan-treasure-harmony.app
+          fi
+
+          while IFS= read -r marker; do
+            cp "$marker" "release-upload/$(basename "$marker")"
+          done < <(find release-artifacts -type f -name "*-not-built.txt")
+
+          test "$(find release-upload -type f | wc -l)" -gt 0
+          ls -la release-upload
+
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.ref_name }}
         run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_NAME="$GITHUB_REF_NAME"
+            RELEASE_TITLE="扫描宝 $GITHUB_REF_NAME"
+            RELEASE_KIND="正式版本"
+          else
+            TAG_NAME="latest"
+            RELEASE_TITLE="扫描宝 latest"
+            RELEASE_KIND="最新构建"
+          fi
+
           cat > release-notes.md <<'EOF'
           扫描宝多端下载包。
 
+          直接下载链接：
+          - Android Debug APK：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk
+          - Android Release APK：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk
+          - HarmonyOS HAP：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap
+          - iOS IPA：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa
+
+          说明：
           - Android：默认提供 debug APK；配置 Android 签名 Secrets 后会额外提供 release APK。
-          - HarmonyOS：需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
-          - iOS：需要先提交 Capacitor iOS 工程，并配置 Apple 签名证书和描述文件。
+          - HarmonyOS：需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境，否则只会提供 harmony-not-built.txt。
+          - iOS：需要先提交 Capacitor iOS 工程，并配置 Apple 签名证书和描述文件，否则只会提供 ios-not-built.txt。
           EOF
 
-          mapfile -d '' files < <(find release-artifacts -type f -print0)
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" "${files[@]}" --clobber
-          else
-            gh release create "$TAG_NAME" "${files[@]}" --title "扫描宝 $TAG_NAME" --notes-file release-notes.md
+          if [[ "$TAG_NAME" != "latest" ]]; then
+            sed -i "s#/latest/#/$TAG_NAME/#g" release-notes.md
           fi
+          sed -i "1s/$/（$RELEASE_KIND）/" release-notes.md
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" --title "$RELEASE_TITLE" --notes-file release-notes.md
+          else
+            gh release create "$TAG_NAME" --target "$GITHUB_SHA" --title "$RELEASE_TITLE" --notes-file release-notes.md
+          fi
+
+          known_assets=(
+            scan-treasure-android-debug.apk
+            scan-treasure-android-release.apk
+            scan-treasure-android-release.aab
+            scan-treasure-harmony.hap
+            scan-treasure-harmony.app
+            scan-treasure-ios.ipa
+            android-release-not-built.txt
+            harmony-not-built.txt
+            ios-not-built.txt
+          )
+          for asset in "${known_assets[@]}"; do
+            gh release delete-asset "$TAG_NAME" "$asset" -y >/dev/null 2>&1 || true
+          done
+
+          mapfile -d '' files < <(find release-upload -type f -print0)
+          gh release upload "$TAG_NAME" "${files[@]}" --clobber

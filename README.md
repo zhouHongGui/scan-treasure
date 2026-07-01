@@ -10,7 +10,7 @@
 - Android Capacitor 工程已存在，代码位于 `web/android/`，当前可以打包 Android debug APK。
 - iOS 原生工程暂未加入仓库，因此 GitHub 暂时不会产出真正的 IPA。
 - HarmonyOS 原生工程暂未加入仓库，因此 GitHub 暂时不会产出真正的 HAP/APP。
-- GitHub Release 下载链接只会在推送 `v*` 版本标签后生成；普通推送到 `master/main` 只会在 Actions 运行记录里生成临时 Artifacts。
+- GitHub 会在每次推送到 `master/main` 后更新 `latest` Release，用户可以在 Releases 页面直接点击安装包下载。
 
 ## 功能
 
@@ -107,6 +107,17 @@ artifacts/android/
 - Actions: <https://github.com/zhouHongGui/scan-treasure/actions>
 - Releases: <https://github.com/zhouHongGui/scan-treasure/releases>
 
+常用直接下载链接：
+
+| 平台 | 链接 |
+|---|---|
+| Android Debug APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk> |
+| Android Release APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk> |
+| HarmonyOS HAP | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap> |
+| iOS IPA | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa> |
+
+说明：当前仓库只有 Android 工程，所以 Android Debug APK 会优先可用；Android Release APK 需要配置签名 Secrets；HarmonyOS 和 iOS 需要先补齐对应原生工程和签名/构建环境，否则对应链接可能暂时返回 404 或只在 Release 中看到未构建说明文件。
+
 自动打包配置位于：
 
 ```text
@@ -117,9 +128,9 @@ artifacts/android/
 
 | 操作 | 结果 | 下载位置 |
 |---|---|---|
-| push 到 `master` / `main` | 自动构建 | GitHub Actions 当前运行记录的 Artifacts |
-| 手动运行 `Build App Downloads` | 自动构建 | GitHub Actions 当前运行记录的 Artifacts |
-| push `v*` 标签，例如 `v0.0.1` | 自动构建并创建/更新 Release | GitHub Releases 页面 |
+| push 到 `master` / `main` | 自动构建并更新 `latest` Release | GitHub Releases 页面，可直接点击安装包 |
+| 手动运行 `Build App Downloads` | 自动构建并更新 `latest` Release | GitHub Releases 页面，可直接点击安装包 |
+| push `v*` 标签，例如 `v0.0.1` | 自动构建并创建/更新对应版本 Release | GitHub Releases 页面 |
 
 发布一个带下载链接的版本：
 
@@ -132,8 +143,8 @@ git push origin v0.0.1
 注意：
 
 - 如果只提交到本地，没有 `git push`，GitHub 不会触发自动打包。
-- 如果只 push 到 `master/main`，下载包在 Actions Artifacts，不在 Releases。
-- 只有推送 `v*` 标签后，才会在 Releases 页面出现正式下载附件。
+- push 到 `master/main` 后会更新 `latest` Release，适合作为“最新测试版”直接下载。
+- 推送 `v*` 标签后会创建版本 Release，适合作为正式版本留档下载。
 
 ## 各平台打包说明
 
