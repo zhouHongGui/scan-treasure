@@ -105,8 +105,9 @@ button {
 }
 
 .pdf-tool {
+  --pdf-tool-footer-space: calc(104px + env(safe-area-inset-bottom));
   min-height: 100vh;
-  padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.74), transparent 34%),
     radial-gradient(44% 22% at 100% 0%, rgba(24, 195, 168, 0.11), transparent 70%),
@@ -129,7 +130,7 @@ button {
 }
 
 .pdf-tool__body {
-  padding: 14px 15px 0;
+  padding: 14px 15px var(--pdf-tool-footer-space);
 }
 
 .pdf-tool__panel {
