@@ -70,16 +70,22 @@ npm run package:all
 - 手动执行 `Build App Downloads`：自动打包并更新 `latest` GitHub Release，下载入口同样在 Releases 页面。
 - push `v*` 标签：自动打包并创建 / 更新对应版本 GitHub Release，下载入口在 Releases 页面。
 
-最新构建直链：
+当前可用的最新构建直链：
 
 ```text
 https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk
-https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk
-https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap
-https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa
 ```
 
-说明：当前仓库只有 Android 原生工程，因此 `scan-treasure-android-debug.apk` 会优先可用。Android release、HarmonyOS、iOS 需要对应签名材料或原生工程补齐后才会生成真实安装包。
+说明：当前仓库只有 Android 原生工程，因此 `scan-treasure-android-debug.apk` 会优先可用。Android release、HarmonyOS、iOS 需要对应签名材料或原生工程补齐后才会生成真实安装包。未生成的平台不会提供假链接，避免点击后 404。
+
+后续生成后的固定文件名：
+
+```text
+scan-treasure-android-release.apk
+scan-treasure-harmony.hap
+scan-treasure-harmony.app
+scan-treasure-ios.ipa
+```
 
 发布一个带下载链接的版本：
 

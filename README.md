@@ -107,16 +107,19 @@ artifacts/android/
 - Actions: <https://github.com/zhouHongGui/scan-treasure/actions>
 - Releases: <https://github.com/zhouHongGui/scan-treasure/releases>
 
-常用直接下载链接：
+当前可用的直接下载链接：
 
 | 平台 | 链接 |
 |---|---|
 | Android Debug APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk> |
-| Android Release APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk> |
-| HarmonyOS HAP | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap> |
-| iOS IPA | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa> |
 
-说明：当前仓库只有 Android 工程，所以 Android Debug APK 会优先可用；Android Release APK 需要配置签名 Secrets；HarmonyOS 和 iOS 需要先补齐对应原生工程和签名/构建环境，否则对应链接可能暂时返回 404 或只在 Release 中看到未构建说明文件。
+暂未提供直接下载的原因：
+
+- Android Release APK：需要先配置 Android 签名 Secrets。
+- HarmonyOS HAP/APP：需要先补齐 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
+- iOS IPA：需要先补齐 Capacitor iOS 工程，并配置 Apple 签名材料。
+
+这些平台生成后会使用固定文件名上传到 Release，例如 `scan-treasure-harmony.hap`、`scan-treasure-ios.ipa`；未生成时不会提供假链接，避免点击后 404。
 
 自动打包配置位于：
 

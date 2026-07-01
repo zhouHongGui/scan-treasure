@@ -342,25 +342,35 @@ jobs:
             RELEASE_KIND="最新构建"
           fi
 
-          cat > release-notes.md <<'EOF'
-          扫描宝多端下载包。
+          ASSET_BASE="https://github.com/zhouHongGui/scan-treasure/releases/download/$TAG_NAME"
 
-          直接下载链接：
-          - Android Debug APK：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk
-          - Android Release APK：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-release.apk
-          - HarmonyOS HAP：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-harmony.hap
-          - iOS IPA：https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-ios.ipa
-
-          说明：
-          - Android：默认提供 debug APK；配置 Android 签名 Secrets 后会额外提供 release APK。
-          - HarmonyOS：需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境，否则只会提供 harmony-not-built.txt。
-          - iOS：需要先提交 Capacitor iOS 工程，并配置 Apple 签名证书和描述文件，否则只会提供 ios-not-built.txt。
-          EOF
-
-          if [[ "$TAG_NAME" != "latest" ]]; then
-            sed -i "s#/latest/#/$TAG_NAME/#g" release-notes.md
-          fi
-          sed -i "1s/$/（$RELEASE_KIND）/" release-notes.md
+          {
+            echo "扫描宝多端下载包（$RELEASE_KIND）。"
+            echo
+            echo "直接下载链接："
+            if [ -f release-upload/scan-treasure-android-debug.apk ]; then
+              echo "- Android Debug APK：$ASSET_BASE/scan-treasure-android-debug.apk"
+            fi
+            if [ -f release-upload/scan-treasure-android-release.apk ]; then
+              echo "- Android Release APK：$ASSET_BASE/scan-treasure-android-release.apk"
+            else
+              echo "- Android Release APK：暂未生成，需要配置 Android 签名 Secrets。"
+            fi
+            if [ -f release-upload/scan-treasure-harmony.hap ]; then
+              echo "- HarmonyOS HAP：$ASSET_BASE/scan-treasure-harmony.hap"
+            elif [ -f release-upload/scan-treasure-harmony.app ]; then
+              echo "- HarmonyOS APP：$ASSET_BASE/scan-treasure-harmony.app"
+            else
+              echo "- HarmonyOS：暂未生成，需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。"
+            fi
+            if [ -f release-upload/scan-treasure-ios.ipa ]; then
+              echo "- iOS IPA：$ASSET_BASE/scan-treasure-ios.ipa"
+            else
+              echo "- iOS IPA：暂未生成，需要先提交 Capacitor iOS 工程并配置 Apple 签名材料。"
+            fi
+            echo
+            echo "说明：Release 附件中只会出现本次实际构建出的安装包；未生成的平台不会提供假链接。"
+          } > release-notes.md
 
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release edit "$TAG_NAME" --title "$RELEASE_TITLE" --notes-file release-notes.md
