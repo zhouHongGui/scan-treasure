@@ -2,6 +2,9 @@
  * 图片处理工具函数
  */
 
+export const SCAN_IMAGE_MAX_SIDE = 2560
+export const SCAN_JPEG_QUALITY = 0.97
+
 /** 加载图片为 HTMLImageElement */
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -35,8 +38,8 @@ export function formatSize(bytes: number): string {
  */
 export async function compressToDataUrl(
   src: string,
-  maxSide = 2000,
-  quality = 0.92,
+  maxSide = SCAN_IMAGE_MAX_SIDE,
+  quality = SCAN_JPEG_QUALITY,
 ): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(src)
   let w = img.naturalWidth
@@ -54,6 +57,8 @@ export async function compressToDataUrl(
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('canvas 2d 上下文不可用')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(img, 0, 0, w, h)
   return { dataUrl: canvas.toDataURL('image/jpeg', quality), width: w, height: h }
 }

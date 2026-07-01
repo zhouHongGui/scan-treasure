@@ -20,7 +20,7 @@ Vue 3 + Vite + TypeScript + Vant + Pinia + vue-router + Capacitor Android + jsPD
 - 不上传服务器
 - 不保存用户文件
 - 无账号
-- 无广告
+- 核心工具无内购；如展示外部推广入口，必须清晰标注并与工具功能区分
 
 ## 改版目标
 

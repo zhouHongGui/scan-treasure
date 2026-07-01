@@ -1,14 +1,14 @@
 import { jsPDF } from 'jspdf'
-import { loadImage } from './image'
+import { loadImage, SCAN_JPEG_QUALITY } from './image'
 import { downloadBlob } from './files'
 
 /**
  * 单张图片导出为 PDF（A4，按比例居中）
  *
  * 规格（docs/04）：
- *   - JPEG 质量 0.85
+ *   - JPEG 质量 0.97，优先复用扫描结果，避免二次低质量压缩
  *   - A4 (210×297mm) 居中按原图比例适配
- *   - 图片最长边压缩到 ≤ 2000px，在 A4 上可满足 ≥150 DPI
+ *   - 图片最长边默认保留到 2560px，在 A4 上优先保证文字清晰度
  *
  * @param dataUrl  图片 dataUrl（JPEG）
  * @param opts     文件名、是否横向
@@ -41,9 +41,9 @@ export async function exportImageToPdf(
   const x = (pageW - w) / 2
   const y = (pageH - h) / 2
 
-  // 重新编码为 0.85 JPEG，统一质量并降低体积
-  const jpeg = await reencodeJpeg(img, 0.85)
-  doc.addImage(jpeg, 'JPEG', x, y, w, h)
+  // 扫描结果本身已是高质量 JPEG，导出 PDF 时避免再次低质量压缩导致文字发糊
+  const jpeg = isJpegDataUrl(dataUrl) ? dataUrl : await reencodeJpeg(img, SCAN_JPEG_QUALITY)
+  doc.addImage(jpeg, 'JPEG', x, y, w, h, undefined, 'NONE')
   await downloadBlob(doc.output('blob'), filename)
 }
 
@@ -76,8 +76,14 @@ async function reencodeJpeg(
   canvas.height = img.naturalHeight
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('canvas 2d 上下文不可用')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(img, 0, 0)
   return canvas.toDataURL('image/jpeg', quality)
+}
+
+function isJpegDataUrl(dataUrl: string): boolean {
+  return /^data:image\/jpe?g;/i.test(dataUrl)
 }
 
 function stamp(): string {

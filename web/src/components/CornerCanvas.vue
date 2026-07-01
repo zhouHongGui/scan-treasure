@@ -43,14 +43,16 @@ let scale = 1
 let dpr = 1
 let wrapW = 0
 let wrapH = 0
+const layoutVersion = ref(0)
 
 /** 角点的显示坐标（图片像素 → 画布显示像素） */
-const displayCorners = computed(() =>
-  props.corners.map((c) => ({
+const displayCorners = computed(() => {
+  layoutVersion.value
+  return props.corners.map((c) => ({
     x: offsetX + c.x * scale,
     y: offsetY + c.y * scale,
-  })),
-)
+  }))
+})
 
 function computeLayout(): void {
   const wrap = wrapRef.value
@@ -82,6 +84,7 @@ function computeLayout(): void {
   canvas.height = Math.round(wrapH * dpr)
   canvas.style.width = wrapW + 'px'
   canvas.style.height = wrapH + 'px'
+  layoutVersion.value++
 }
 
 function draw(): void {
@@ -99,6 +102,7 @@ function draw(): void {
 
   // 2. 遮罩：半透明黑覆盖 + evenodd 镂空四边形
   const dc = displayCorners.value
+  if (dc.length !== 4) return
   ctx.fillStyle = 'rgba(0,0,0,0.5)'
   ctx.beginPath()
   ctx.rect(0, 0, wrapW, wrapH)
@@ -190,13 +194,13 @@ onMounted(() => {
   img.onload = () => {
     imgLoaded = true
     computeLayout()
-    draw()
+    scheduleDraw()
   }
   img.src = props.src
 
   ro = new ResizeObserver(() => {
     computeLayout()
-    draw()
+    scheduleDraw()
   })
   if (wrapRef.value) ro.observe(wrapRef.value)
 })

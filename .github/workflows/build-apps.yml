@@ -1,0 +1,308 @@
+# Build app packages for GitHub downloads.
+# - Push to main/master: packages are available in the workflow run artifacts.
+# - Push a tag like v1.0.0: packages are uploaded to a GitHub Release.
+name: Build App Downloads
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  HARMONY_PROJECT_DIR: ${{ vars.HARMONY_PROJECT_DIR }}
+  HARMONY_WEB_DIST_DIR: ${{ vars.HARMONY_WEB_DIST_DIR }}
+
+concurrency:
+  group: app-downloads-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Type check
+        working-directory: web
+        run: npm run type-check
+
+      - name: Build web and sync Android
+        working-directory: web
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Build signed release APK when secrets exist
+        working-directory: web/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p ../../app-artifacts/android
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            mkdir -p "$RUNNER_TEMP/android-signing"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-signing/release.jks"
+            export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/android-signing/release.jks"
+            ./gradlew assembleRelease --no-daemon
+          else
+            echo "Android release APK was not built because signing secrets are not configured. Debug APK is available." > ../../app-artifacts/android/android-release-not-built.txt
+          fi
+
+      - name: Collect Android packages
+        run: |
+          mkdir -p app-artifacts/android
+          find web/android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -print -exec cp {} app-artifacts/android/ \;
+          test "$(find app-artifacts/android -type f | wc -l)" -gt 0
+          ls -la app-artifacts/android
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-treasure-android
+          path: app-artifacts/android
+          if-no-files-found: error
+          retention-days: 30
+
+  harmony:
+    name: HarmonyOS HAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect HarmonyOS project
+        run: |
+          mkdir -p app-artifacts/harmony
+          PROJECT_DIR="${HARMONY_PROJECT_DIR:-web/harmony}"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          if [ ! -d "$PROJECT_DIR" ]; then
+            echo "HarmonyOS project not found. Create a HarmonyOS WebView shell and set HARMONY_PROJECT_DIR before packaging." > app-artifacts/harmony/harmony-not-built.txt
+            echo "HARMONY_SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: env.HARMONY_SKIP != '1'
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web for HarmonyOS
+        if: env.HARMONY_SKIP != '1'
+        working-directory: web
+        run: |
+          npm ci
+          npm run type-check
+          npm run build
+
+      - name: Copy web dist into HarmonyOS project
+        if: env.HARMONY_SKIP != '1' && env.HARMONY_WEB_DIST_DIR != ''
+        run: |
+          mkdir -p "$HARMONY_WEB_DIST_DIR"
+          rm -rf "$HARMONY_WEB_DIST_DIR"/*
+          cp -R web/dist/. "$HARMONY_WEB_DIST_DIR"/
+
+      - name: Build HarmonyOS package
+        if: env.HARMONY_SKIP != '1'
+        run: |
+          if [ ! -f "$PROJECT_DIR/hvigorw" ]; then
+            echo "HarmonyOS hvigor wrapper not found. Open the project in DevEco Studio once or commit hvigorw." > app-artifacts/harmony/harmony-not-built.txt
+            exit 0
+          fi
+          chmod +x "$PROJECT_DIR/hvigorw"
+          (cd "$PROJECT_DIR" && ./hvigorw assembleHap --no-daemon)
+          find "$PROJECT_DIR" -type f \( -name "*.hap" -o -name "*.app" \) -print -exec cp {} app-artifacts/harmony/ \;
+          test "$(find app-artifacts/harmony -type f | wc -l)" -gt 0
+
+      - name: Upload HarmonyOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-treasure-harmony
+          path: app-artifacts/harmony
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: iOS IPA
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect iOS project
+        run: |
+          mkdir -p app-artifacts/ios
+          if [ ! -d "web/ios/App" ]; then
+            echo "iOS Capacitor project not found. Install @capacitor/ios and run 'npx cap add ios' before packaging." > app-artifacts/ios/ios-not-built.txt
+            echo "IOS_SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: env.IOS_SKIP != '1'
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Apple signing assets
+        if: env.IOS_SKIP != '1'
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE_BASE64" ] || [ -z "$APPLE_CERTIFICATE_PASSWORD" ] || [ -z "$APPLE_PROVISION_PROFILE_BASE64" ] || [ -z "$IOS_PROVISIONING_PROFILE_NAME" ]; then
+            echo "iOS IPA was not built because Apple signing secrets are not configured." > app-artifacts/ios/ios-not-built.txt
+            echo "IOS_SKIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          decode_base64() {
+            if echo "$1" | base64 --decode > "$2" 2>/dev/null; then
+              return 0
+            fi
+            echo "$1" | base64 -D > "$2"
+          }
+
+          CERTIFICATE_PATH="$RUNNER_TEMP/ios-signing.p12"
+          PROFILE_PATH="$RUNNER_TEMP/ios-profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+
+          decode_base64 "$APPLE_CERTIFICATE_BASE64" "$CERTIFICATE_PATH"
+          decode_base64 "$APPLE_PROVISION_PROFILE_BASE64" "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+
+      - name: Build iOS IPA
+        if: env.IOS_SKIP != '1'
+        working-directory: web
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          IOS_EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: |
+          if [ -z "$APPLE_TEAM_ID" ] || [ -z "$IOS_PROVISIONING_PROFILE_NAME" ]; then
+            echo "iOS IPA was not built because APPLE_TEAM_ID or IOS_PROVISIONING_PROFILE_NAME is missing." > ../app-artifacts/ios/ios-not-built.txt
+            exit 0
+          fi
+
+          npm ci
+          npm run type-check
+          npm run build
+          npx cap sync ios
+
+          BUNDLE_ID="${IOS_BUNDLE_ID:-com.smartscan.app}"
+          EXPORT_METHOD="${IOS_EXPORT_METHOD:-ad-hoc}"
+          cat > ../app-artifacts/ios/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>$EXPORT_METHOD</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$BUNDLE_ID</key>
+              <string>$IOS_PROVISIONING_PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath ../app-artifacts/ios/ScanTreasure.xcarchive \
+            archive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME"
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath ../app-artifacts/ios/ScanTreasure.xcarchive \
+            -exportPath ../app-artifacts/ios \
+            -exportOptionsPlist ../app-artifacts/ios/ExportOptions.plist
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-treasure-ios
+          path: |
+            app-artifacts/ios/*.ipa
+            app-artifacts/ios/ios-not-built.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  github-release:
+    name: GitHub Release downloads
+    needs: [android, harmony, ios]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cat > release-notes.md <<'EOF'
+          扫描宝多端下载包。
+
+          - Android：默认提供 debug APK；配置 Android 签名 Secrets 后会额外提供 release APK。
+          - HarmonyOS：需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
+          - iOS：需要先提交 Capacitor iOS 工程，并配置 Apple 签名证书和描述文件。
+          EOF
+
+          mapfile -d '' files < <(find release-artifacts -type f -print0)
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$TAG_NAME" "${files[@]}" --title "扫描宝 $TAG_NAME" --notes-file release-notes.md
+          fi

@@ -10,49 +10,12 @@
     />
     <meta name="applicable-device" content="pc,mobile" />
     <meta name="format-detection" content="telephone=no,email=no,address=no" />
-    <meta name="robots" content="index,follow" />
     <meta name="theme-color" content="#2563eb" />
-    <meta
-      name="description"
-      content="扫描宝 Scan Treasure 是免费开源的文档扫描、证件扫描、图片转 PDF H5 工具，浏览器本地完成边缘识别、透视校正和图像增强，图片不上传服务器。"
-    />
-    <meta
-      name="keywords"
-      content="扫描宝,Scan Treasure,文档扫描,证件扫描,身份证扫描,图片转PDF,PDF扫描,本地扫描,开源扫描工具,H5扫描工具"
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="zh_CN" />
-    <meta
-      property="og:title"
-      content="扫描宝 Scan Treasure - 免费开源文档扫描和证件扫描工具"
-    />
-    <meta
-      property="og:description"
-      content="手机拍照或相册导入，自动识别边缘、校正透视、增强画面并导出 PDF，全部在浏览器本地处理。"
-    />
-    <meta property="og:image" content="assets/hero.png" />
     <title>扫描宝 Scan Treasure - 免费开源文档扫描和证件扫描工具</title>
     <link rel="icon" type="image/png" href="assets/favicon.png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <link rel="preload" href="assets/hero.png" as="image" />
     <link rel="stylesheet" href="styles.css" />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "扫描宝 Scan Treasure",
-        "alternateName": "Scan Treasure",
-        "applicationCategory": "UtilityApplication",
-        "operatingSystem": "Web, Android, iOS",
-        "description": "免费开源的文档扫描、证件扫描和图片转 PDF H5 工具，浏览器本地完成边缘识别、透视校正、图像增强和 PDF 导出。",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "CNY"
-        },
-        "license": "https://opensource.org/licenses/MIT"
-      }
-    </script>
   </head>
   <body data-app-url="../web/">
     <a class="skip-link" href="#content">跳到正文</a>
@@ -76,31 +39,26 @@
 
     <main id="content">
       <section id="top" class="hero" aria-labelledby="hero-title">
+        <div class="hero__image" aria-hidden="true">
+          <img src="assets/hero.png" width="1408" height="768" alt="" />
+        </div>
+        <div class="hero__shade" aria-hidden="true"></div>
         <div class="hero__content reveal">
-          <p class="eyebrow">免费开源 · 纯本地处理 · 无服务器上传</p>
+          <p class="eyebrow">本地扫描 · 文档整理 · PDF 工具</p>
           <h1 id="hero-title">扫描宝 Scan Treasure</h1>
           <p class="hero__lead">
-            面向手机和浏览器的文档扫描、证件扫描、图片转 PDF 工具。拍照或从相册选择图片后，可自动识别纸张边缘、校正透视、增强文字清晰度，并导出扫描件。
+            把纸质材料变成清晰、规整、可归档的电子文件。拍照或选图后完成边缘识别、透视校正、画面增强，并导出图片或 PDF。
           </p>
           <div class="hero__actions" aria-label="主要操作">
-            <a class="button button--primary" href="../web/" data-open-app>立即使用扫描工具</a>
-            <a class="button button--secondary" href="#features">查看功能</a>
+            <a class="button button--primary" href="../web/" data-open-app>打开扫描工具</a>
+            <a class="button button--secondary" href="#workflow">查看流程</a>
           </div>
           <ul class="hero__facts" aria-label="产品特点">
-            <li><strong>100%</strong><span>浏览器本地处理</span></li>
-            <li><strong>0</strong><span>登录、广告、内购</span></li>
-            <li><strong>MIT</strong><span>开源协议</span></li>
+            <li><strong>本地</strong><span>文件在设备内处理</span></li>
+            <li><strong>轻量</strong><span>无需账号和上传</span></li>
+            <li><strong>开源</strong><span>可自行部署维护</span></li>
           </ul>
         </div>
-        <figure class="hero__media reveal">
-          <img
-            src="assets/hero.png"
-            width="1408"
-            height="768"
-            alt="扫描宝文档扫描、证件扫描和 PDF 导出界面展示"
-          />
-          <figcaption>文档扫描、证件扫描、图片增强、PDF 导出</figcaption>
-        </figure>
       </section>
 
       <section class="section section--intro" aria-labelledby="intro-title">
@@ -114,17 +72,17 @@
           </div>
           <div class="use-cases" aria-label="适用场景">
             <article class="use-case reveal">
-              <span aria-hidden="true">01</span>
+              <span aria-hidden="true">文档</span>
               <h3>文档扫描</h3>
               <p>拍摄合同、纸张、表格和书页，裁切边缘后生成平整扫描件。</p>
             </article>
             <article class="use-case reveal">
-              <span aria-hidden="true">02</span>
+              <span aria-hidden="true">证件</span>
               <h3>证件扫描</h3>
               <p>处理身份证正反面照片，合成适合存档或打印的 A4 版式。</p>
             </article>
             <article class="use-case reveal">
-              <span aria-hidden="true">03</span>
+              <span aria-hidden="true">PDF</span>
               <h3>图片转 PDF</h3>
               <p>把增强后的扫描结果导出为 PDF，便于提交、发送和备份。</p>
             </article>
@@ -182,7 +140,7 @@
           </div>
           <ul class="privacy-list reveal">
             <li>无需注册登录</li>
-            <li>无广告、无内购</li>
+            <li>工具无内购</li>
             <li>无服务器图片上传</li>
             <li>支持静态托管和私有部署</li>
           </ul>
@@ -224,13 +182,13 @@
             <p class="section-kicker">开源项目</p>
             <h2 id="source-title">适合个人使用，也适合自行部署</h2>
             <p>
-              扫描宝前端应用使用 Vue 3、Vite、TypeScript、Vant、opencv.js 和 jsPDF 构建。当前官网目录则使用纯 HTML、CSS、JavaScript，便于百度等搜索引擎直接抓取首页正文。
+              扫描宝前端应用使用 Vue 3、Vite、TypeScript、Vant、opencv.js 和 jsPDF 构建。当前官网目录使用纯 HTML、CSS、JavaScript，结构简单，便于维护和静态部署。
             </p>
           </div>
           <div class="source-note reveal">
-            <strong>SEO 结构</strong>
+            <strong>部署方式</strong>
             <p>
-              官网首页为静态 HTML，正文、标题、FAQ、结构化数据和 robots.txt 均不依赖前端渲染。上线后填写真实域名、提交百度资源平台，并补充 sitemap。
+              官网可直接作为静态文件托管，也可以和扫描工具分开部署。上线前只需要替换真实访问地址、图标和项目说明。
             </p>
           </div>
         </div>
@@ -252,7 +210,7 @@
             <details class="reveal">
               <summary>扫描宝是免费的吗？</summary>
               <p>
-                是。扫描宝是免费开源项目，没有登录、广告和内购。你也可以基于 MIT 协议自行部署或二次开发。
+                是。扫描宝核心工具免费开源，无需登录，工具内无内购。官网底部可能展示清晰标注的外部推广入口，你也可以基于 MIT 协议自行部署或二次开发。
               </p>
             </details>
             <details class="reveal">
@@ -264,10 +222,37 @@
             <details class="reveal">
               <summary>为什么官网不用 Vue 渲染？</summary>
               <p>
-                百度 SEO 更看重首屏 HTML 可抓取内容。官网使用静态 HTML 输出完整正文，Vue 应用只负责实际扫描工具，两者分开更稳。
+                官网内容较轻，使用静态 HTML 可以减少构建复杂度。Vue 应用专注实际扫描工具，两者分开维护更清晰。
               </p>
             </details>
           </div>
+        </div>
+      </section>
+
+      <section class="section section--partner" aria-labelledby="partner-title">
+        <div class="section__inner">
+          <aside class="partner-card reveal" aria-label="合作推荐">
+            <div class="partner-card__copy">
+              <span class="partner-card__tag">推广入口</span>
+              <h2 id="partner-title">移动 / 电信卡申请</h2>
+              <p>
+                如需办理通信卡，可前往合作店铺查看套餐并下单申请。点击后会离开扫描宝官网，订单资料在店铺页面提交。
+              </p>
+            </div>
+            <ul class="partner-card__points" aria-label="可申请类型">
+              <li>移动卡</li>
+              <li>电信卡</li>
+              <li>外部办理页面</li>
+            </ul>
+            <a
+              class="partner-card__action"
+              href="https://hklingqu.chshebei.cn/ProductEn/Index/01190a6b967b8267"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              去店铺申请
+            </a>
+          </aside>
         </div>
       </section>
     </main>

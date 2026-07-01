@@ -54,7 +54,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { useScanStore } from '@/store/scan'
 import { useImageClient } from '@/composables/useImageProcess'
-import { compressToDataUrl } from '@/utils/image'
+import { compressToDataUrl, SCAN_IMAGE_MAX_SIDE, SCAN_JPEG_QUALITY } from '@/utils/image'
 import { fullImageCorners, type Corner } from '@/utils/geometry'
 import CornerCanvas from '@/components/CornerCanvas.vue'
 
@@ -89,17 +89,28 @@ onMounted(async () => {
 
   try {
     // 1. 先用纯 canvas 压缩，立刻让用户看到图 + 可拖角点
-    // 最长边 1600：移动端清晰度与处理速度的折中
-    const data = await compressToDataUrl(orig.dataUrl, 1600)
+    // 文档文字对分辨率敏感，保留更高最长边以减少小字发糊
+    const data = await compressToDataUrl(orig.dataUrl, SCAN_IMAGE_MAX_SIDE, SCAN_JPEG_QUALITY)
     working.value = data
     store.setWorkingImage(data)
-    corners.value = fullImageCorners(data.width, data.height)
+    const cameraCorners = scaleOriginalCornersToWorking(
+      store.originalCorners,
+      orig.width,
+      orig.height,
+      data.width,
+      data.height,
+    )
+    corners.value = cameraCorners || fullImageCorners(data.width, data.height)
     store.setCorners(corners.value)
-    autoOk.value = false
+    autoOk.value = !!cameraCorners
     status.value = 'ready' // 立刻可交互，不等自动识别
 
-    // 2. 后台自动找边；识别失败则保持全图四角，用户手动拖
-    runBackgroundDetect(data.dataUrl)
+    if (cameraCorners) {
+      showToast('已根据扫描框自动框选，可微调四角')
+    } else {
+      // 2. 后台自动找边；识别失败则保持全图四角，用户手动拖
+      runBackgroundDetect(data.dataUrl)
+    }
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '处理失败'
     status.value = 'error'
@@ -110,7 +121,7 @@ onMounted(async () => {
 async function runBackgroundDetect(dataUrl: string): Promise<void> {
   detecting.value = true
   try {
-    const detected = await client.detect(dataUrl)
+    const detected = await client.detect(dataUrl, { mode: 'document' })
     if (unmounted) return
     if (detected && !userEdited) {
       corners.value = detected
@@ -135,6 +146,28 @@ function onCornersUpdate(c: Corner[]): void {
   userEdited = true
   corners.value = c
   store.setCorners(c)
+}
+
+function scaleOriginalCornersToWorking(
+  originalCorners: Corner[],
+  originalW: number,
+  originalH: number,
+  workingW: number,
+  workingH: number,
+): Corner[] | null {
+  if (originalCorners.length !== 4 || !originalW || !originalH || !workingW || !workingH) return null
+  const sx = workingW / originalW
+  const sy = workingH / originalH
+  const scaled = originalCorners.map((p) => ({
+    x: Math.max(0, Math.min(workingW, p.x * sx)),
+    y: Math.max(0, Math.min(workingH, p.y * sy)),
+  }))
+  const xs = scaled.map((p) => p.x)
+  const ys = scaled.map((p) => p.y)
+  const w = Math.max(...xs) - Math.min(...xs)
+  const h = Math.max(...ys) - Math.min(...ys)
+  if (w < workingW * 0.12 || h < workingH * 0.12) return null
+  return scaled
 }
 
 function reDetect(): void {

@@ -63,6 +63,7 @@ import { exportImageToPdf, exportImageFile } from '@/utils/pdf'
 
 const MODES: { value: EnhanceMode; label: string }[] = [
   { value: 'color', label: '彩色' },
+  { value: 'sharp', label: '高清' },
   { value: 'brighten', label: '增亮' },
   { value: 'gray', label: '灰度' },
   { value: 'bw', label: '黑白' },

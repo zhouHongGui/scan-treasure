@@ -13,10 +13,15 @@
 
     <main class="home__main">
       <div v-if="!image && !loading" class="options">
-        <button class="option option--primary" type="button" @click="startCameraScan">
+        <button
+          class="option option--primary"
+          type="button"
+          :disabled="scanStarting"
+          @click="startCameraScan"
+        >
           <div class="option__icon"><van-icon name="scan" /></div>
-          <p class="option__title">扫描文件</p>
-          <p class="option__sub">拍照扫描文档</p>
+          <p class="option__title">{{ scanStarting ? '请求摄像头权限…' : '扫描文件' }}</p>
+          <p class="option__sub">自动识别文档并扫描</p>
         </button>
         <button class="option" type="button" @click="triggerAlbumPick">
           <div class="option__icon"><van-icon name="description" /></div>
@@ -59,7 +64,7 @@
     </aside>
 
     <footer class="home__footer">
-      <p v-if="error" class="home__error">{{ error }}</p>
+      <p v-if="error || cameraError" class="home__error">{{ error || cameraError }}</p>
       <p class="home__tip">文件仅在当前设备处理，不会上传服务器</p>
     </footer>
 
@@ -76,16 +81,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
 import { useImagePicker } from '@/composables/useImagePicker'
 import { useScanStore } from '@/store/scan'
 import { formatSize, loadImage } from '@/utils/image'
-import { useCameraCapture } from '@/composables/useCameraCapture'
+import { useCameraCapture, type CameraCaptureResult } from '@/composables/useCameraCapture'
 
 const router = useRouter()
 const store = useScanStore()
 const albumInputRef = ref<HTMLInputElement | null>(null)
 const { image, loading, error, loadFile } = useImagePicker()
 const camera = useCameraCapture()
+const cameraError = ref('')
+const scanStarting = ref(false)
 
 // 自有店铺推广（办卡）：点击新标签打开；可关闭，关闭状态仅记本地、不上传
 const PROMO_URL = 'https://hklingqu.chshebei.cn/ProductEn/Index/01190a6b967b8267'
@@ -119,24 +127,33 @@ function goIdCard(): void {
 }
 
 async function fromCamera(): Promise<void> {
-  const dataUrl = await camera.open()
-  if (!dataUrl) return
+  cameraError.value = ''
+  scanStarting.value = true
   try {
-    await enterEditWithDataUrl(dataUrl)
-  } catch {
-    /* 忽略 */
+    const result = await camera.open()
+    if (!result) return
+    await enterEditWithCameraResult(result)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '无法打开摄像头'
+    cameraError.value = msg
+    showToast(msg)
+  } finally {
+    scanStarting.value = false
   }
 }
 
-async function enterEditWithDataUrl(dataUrl: string): Promise<void> {
-  const img = await loadImage(dataUrl)
+async function enterEditWithCameraResult(result: CameraCaptureResult): Promise<void> {
+  const img = await loadImage(result.dataUrl)
   store.reset()
   store.setImage({
-    dataUrl,
-    url: dataUrl,
+    dataUrl: result.dataUrl,
+    url: result.dataUrl,
     width: img.naturalWidth,
     height: img.naturalHeight,
   })
+  if (result.corners?.length === 4) {
+    store.setOriginalCorners(result.corners)
+  }
   router.push('/edit')
 }
 
@@ -255,6 +272,11 @@ async function onFileChange(e: Event): Promise<void> {
 .option:active {
   transform: scale(0.97);
   box-shadow: var(--ss-shadow-sm);
+}
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
 }
 .option__icon {
   width: 56px;

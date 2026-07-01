@@ -11,10 +11,16 @@
     "type-check": "vue-tsc --noEmit",
     "cap:sync": "npm run build && cap sync",
     "cap:android": "npm run build && cap sync android && cap open android",
-    "gen:icons": "node scripts/gen-icons.cjs"
+    "gen:icons": "node scripts/gen-icons.cjs",
+    "package:android": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-android.ps1 -Variant Debug",
+    "package:android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-android.ps1 -Variant Release",
+    "package:harmony": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-harmony.ps1",
+    "package:ios": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-ios.ps1",
+    "package:all": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-all.ps1"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.2",
     "@capacitor/cli": "^6.2.1",
     "@capacitor/core": "^6.2.1",
     "@capacitor/filesystem": "^6.0.4",

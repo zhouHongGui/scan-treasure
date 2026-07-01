@@ -34,7 +34,7 @@
           :corners="currentCorners"
           :img-width="currentImage.width"
           :img-height="currentImage.height"
-          :pad="32"
+          :pad="48"
           @update:corners="onCornersUpdate"
         />
 
@@ -142,8 +142,8 @@ import {
   combineIdCardSides,
   type EnhanceMode,
 } from '@/composables/useImageProcess'
-import { compressToDataUrl } from '@/utils/image'
-import { fullImageCorners, type Corner } from '@/utils/geometry'
+import { compressToDataUrl, loadImage, SCAN_IMAGE_MAX_SIDE, SCAN_JPEG_QUALITY } from '@/utils/image'
+import { orderCorners, type Corner } from '@/utils/geometry'
 import { exportImageToPdf, exportImageFile } from '@/utils/pdf'
 import { useCapture } from '@/composables/useCapture'
 import CornerCanvas from '@/components/CornerCanvas.vue'
@@ -158,6 +158,7 @@ const STEPS: { key: Step; label: string }[] = [
 ]
 const MODES: { value: EnhanceMode; label: string }[] = [
   { value: 'color', label: '彩色' },
+  { value: 'sharp', label: '高清' },
   { value: 'brighten', label: '增亮' },
   { value: 'gray', label: '灰度' },
   { value: 'bw', label: '黑白' },
@@ -213,14 +214,27 @@ function onPickSelect(item: ActionSheetAction): void {
 }
 
 /** 由 dataUrl（相册或拍摄）加载某一面：压缩 → 自动框选 → 写入 */
-async function loadSide(dataUrl: string): Promise<void> {
-  const work = await compressToDataUrl(dataUrl, 1600)
-  let corners = await client.detect(work.dataUrl)
-  if (!corners || corners.length !== 4) {
-    corners = fullImageCorners(work.width, work.height)
-  } else {
-    showToast('已自动框选，可微调四角')
+async function loadSide(dataUrl: string, sourceCorners?: Corner[]): Promise<void> {
+  const sourceImage = sourceCorners?.length === 4 ? await loadImage(dataUrl) : null
+  const work = await compressToDataUrl(dataUrl, SCAN_IMAGE_MAX_SIDE, SCAN_JPEG_QUALITY)
+
+  let corners =
+    sourceImage && sourceCorners
+      ? scaleSourceCornersToWork(sourceCorners, sourceImage.naturalWidth, sourceImage.naturalHeight, work.width, work.height)
+      : null
+
+  if (!corners) {
+    const detected = await client.detect(work.dataUrl, { mode: 'id-card' })
+    corners = normalizeIdCardCorners(detected, work.width, work.height)
   }
+
+  if (corners) {
+    showToast('已自动框选，可微调四角')
+  } else {
+    corners = centeredIdCardCorners(work.width, work.height)
+    showToast('已按证件比例预框选，可微调四角')
+  }
+
   if (pendingSide === 'front') {
     front.value = work
     frontCorners.value = corners
@@ -231,13 +245,85 @@ async function loadSide(dataUrl: string): Promise<void> {
 }
 
 async function fromCamera(): Promise<void> {
-  const dataUrl = await capture.takePhoto()
-  if (!dataUrl) return
+  const result = await capture.takePhoto()
+  if (!result) return
   try {
-    await loadSide(dataUrl)
+    await loadSide(result.dataUrl, result.corners)
   } catch (err) {
     showToast(err instanceof Error ? err.message : '拍摄处理失败')
   }
+}
+
+function scaleSourceCornersToWork(
+  corners: Corner[],
+  sourceW: number,
+  sourceH: number,
+  workW: number,
+  workH: number,
+): Corner[] | null {
+  if (corners.length !== 4 || !sourceW || !sourceH || !workW || !workH) return null
+  const sx = workW / sourceW
+  const sy = workH / sourceH
+  return normalizeIdCardCorners(
+    corners.map((p) => ({
+      x: p.x * sx,
+      y: p.y * sy,
+    })),
+    workW,
+    workH,
+  )
+}
+
+function normalizeIdCardCorners(corners: Corner[] | null, width: number, height: number): Corner[] | null {
+  if (!corners || corners.length !== 4) return null
+  const ordered = orderCorners(
+    corners.map((p) => ({
+      x: Math.max(0, Math.min(width, p.x)),
+      y: Math.max(0, Math.min(height, p.y)),
+    })),
+  )
+  return isUsableIdCardBox(ordered, width, height) ? ordered : null
+}
+
+function isUsableIdCardBox(corners: Corner[], width: number, height: number): boolean {
+  const xs = corners.map((p) => p.x)
+  const ys = corners.map((p) => p.y)
+  const boxW = Math.max(...xs) - Math.min(...xs)
+  const boxH = Math.max(...ys) - Math.min(...ys)
+  if (boxW <= 0 || boxH <= 0) return false
+
+  const areaRatio = (boxW * boxH) / (width * height)
+  if (areaRatio < 0.035) return false
+
+  const longRatio = Math.max(boxW / boxH, boxH / boxW)
+  const ratioError = Math.abs(Math.log(longRatio / 1.586))
+  if (ratioError > Math.log(1.38)) return false
+
+  const imageLongRatio = Math.max(width / height, height / width)
+  const fullImageLooksLikeCard = Math.abs(Math.log(imageLongRatio / 1.586)) <= Math.log(1.18)
+  if (areaRatio > 0.88 && !fullImageLooksLikeCard) return false
+
+  return true
+}
+
+function centeredIdCardCorners(width: number, height: number): Corner[] {
+  const ratio = 1.586
+  let cardW = width * 0.86
+  let cardH = cardW / ratio
+  const maxH = height * 0.72
+  if (cardH > maxH) {
+    cardH = maxH
+    cardW = cardH * ratio
+  }
+
+  const left = (width - cardW) / 2
+  const top = (height - cardH) / 2
+  return [
+    { x: left, y: top },
+    { x: left + cardW, y: top },
+    { x: left + cardW, y: top + cardH },
+    { x: left, y: top + cardH },
+  ]
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {

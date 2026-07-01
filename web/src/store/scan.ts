@@ -8,6 +8,8 @@ import type { EnhanceMode } from '@/composables/useImageProcess'
 export const useScanStore = defineStore('scan', () => {
   // 用户选中的原始图片
   const originalImage = ref<PickedImage | null>(null)
+  // 摄像头扫描时带回的原始图四角，坐标基于 originalImage
+  const originalCorners = ref<Corner[]>([])
   // 压缩后的处理用图（喂给透视校正），角点坐标基于它的尺寸
   const workingImage = ref<{
     dataUrl: string
@@ -33,6 +35,9 @@ export const useScanStore = defineStore('scan', () => {
 
   function setImage(img: PickedImage) {
     originalImage.value = img
+  }
+  function setOriginalCorners(c: Corner[]) {
+    originalCorners.value = c
   }
   function setWorkingImage(data: {
     dataUrl: string
@@ -63,6 +68,7 @@ export const useScanStore = defineStore('scan', () => {
   }
   function reset() {
     originalImage.value = null
+    originalCorners.value = []
     workingImage.value = null
     corners.value = []
     warpedImage.value = null
@@ -72,12 +78,14 @@ export const useScanStore = defineStore('scan', () => {
 
   return {
     originalImage,
+    originalCorners,
     workingImage,
     corners,
     warpedImage,
     enhanceMode,
     enhancedImage,
     setImage,
+    setOriginalCorners,
     setWorkingImage,
     setCorners,
     setWarpedImage,
