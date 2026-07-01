@@ -48,8 +48,8 @@
       <a class="promo__link" :href="PROMO_URL" target="_blank" rel="noopener noreferrer">
         <span class="promo__icon"><van-icon name="gift-o" /></span>
         <span class="promo__text">
-          <strong><span class="promo__price">19元</span> 享 250GB 大流量 <em>推广</em></strong>
-          <small>移动 / 电信 号卡 · 在线申请、包邮到家</small>
+          <strong>19元 享 250GB 大流量</strong>
+          <small>移动 / 电信 号卡 · 在线申请包邮 · 推广</small>
         </span>
         <span class="promo__cta">去办理 <van-icon name="arrow" /></span>
       </a>
@@ -335,27 +335,26 @@ async function onFileChange(e: Event): Promise<void> {
   max-width: 460px;
   margin: 4px auto 14px;
   border-radius: var(--ss-radius-lg);
-  border: 1px solid #ffd7bf;
-  background: linear-gradient(135deg, #fff6f0, #ffffff);
-  box-shadow: 0 6px 18px rgba(255, 122, 69, 0.14);
+  background: linear-gradient(135deg, #ff9a5a 0%, #ff5a3c 100%);
+  box-shadow: 0 10px 24px rgba(255, 90, 60, 0.28);
   overflow: hidden;
 }
 .promo__link {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 46px 14px 14px;
-  color: var(--ss-text);
+  padding: 16px 44px 16px 14px;
+  color: #fff;
   text-decoration: none;
 }
 .promo__icon {
   flex: 0 0 auto;
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #ff8a4c, #ff5a3c);
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
   font-size: 22px;
 }
@@ -364,29 +363,15 @@ async function onFileChange(e: Event): Promise<void> {
   min-width: 0;
 }
 .promo__text strong {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-}
-.promo__price {
-  color: #ff5a3c;
+  display: block;
+  font-size: 15px;
   font-weight: 800;
-  font-size: 16px;
-}
-.promo__text strong em {
-  font-style: normal;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: var(--ss-radius-pill);
-  background: #ffe3d3;
-  color: #e0571a;
-  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 .promo__text small {
   display: block;
   margin-top: 3px;
-  color: var(--ss-text-light);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -395,13 +380,14 @@ async function onFileChange(e: Event): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 7px 13px;
+  padding: 8px 14px;
   border-radius: var(--ss-radius-pill);
-  background: linear-gradient(135deg, #ff8a4c, #ff5a3c);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
+  background: #fff;
+  color: #ff5a3c;
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 .promo__close {
   position: absolute;
@@ -411,8 +397,8 @@ async function onFileChange(e: Event): Promise<void> {
   height: 24px;
   border: 0;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--ss-text-light);
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
