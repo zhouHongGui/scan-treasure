@@ -42,6 +42,24 @@ if (-not (Test-Path $AndroidDir)) {
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
+$StalePackageNames = @(
+  "app-debug.apk",
+  "app-release.apk",
+  "app-release-unsigned.apk",
+  "scan-treasure-android-debug.apk",
+  "scan-treasure-android-release.apk",
+  "scan-treasure-android-release.aab",
+  "ScanTreasure-Android-Debug.apk",
+  "ScanTreasure-Android-Release.apk",
+  "ScanTreasure-Android-Release.aab"
+)
+foreach ($Name in $StalePackageNames) {
+  $Path = Join-Path $OutDir $Name
+  if (Test-Path $Path) {
+    Remove-Item -LiteralPath $Path -Force
+  }
+}
+
 function Get-JavaMajorVersion {
   try {
     $VersionText = (& java -version 2>&1 | Out-String)
@@ -96,10 +114,29 @@ $Patterns = @(
   "app\build\outputs\bundle\release\*.aab"
 )
 
+function Get-AndroidPackageName {
+  param([System.IO.FileInfo]$Package)
+
+  $FullName = $Package.FullName
+  if ($Package.Extension -eq ".aab") {
+    return "ScanTreasure-Android-Release.aab"
+  }
+
+  if ($FullName -match "[\\/]debug[\\/]") {
+    return "ScanTreasure-Android-Debug.apk"
+  }
+
+  if ($FullName -match "[\\/]release[\\/]") {
+    return "ScanTreasure-Android-Release.apk"
+  }
+
+  return "ScanTreasure-Android$($Package.Extension)"
+}
+
 $Copied = @()
 foreach ($Pattern in $Patterns) {
   Get-ChildItem -Path (Join-Path $AndroidDir $Pattern) -ErrorAction SilentlyContinue | ForEach-Object {
-    $Target = Join-Path $OutDir $_.Name
+    $Target = Join-Path $OutDir (Get-AndroidPackageName $_)
     Copy-Item -LiteralPath $_.FullName -Destination $Target -Force
     $Copied += $Target
   }

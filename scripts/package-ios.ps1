@@ -15,6 +15,17 @@ if (-not $OutDir) {
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
+$StalePackageNames = @(
+  "scan-treasure-ios.ipa",
+  "ScanTreasure-iOS.ipa"
+)
+foreach ($Name in $StalePackageNames) {
+  $Path = Join-Path $OutDir $Name
+  if (Test-Path $Path) {
+    Remove-Item -LiteralPath $Path -Force
+  }
+}
+
 function Write-SkipNote {
   param([string]$Message)
   $Path = Join-Path $OutDir "ios-not-built.txt"
@@ -111,4 +122,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "iOS packages:"
-Get-ChildItem -Path $OutDir -Filter *.ipa -File | ForEach-Object { Write-Host " - $($_.FullName)" }
+$IpaFiles = Get-ChildItem -Path $OutDir -Filter *.ipa -File
+foreach ($Ipa in $IpaFiles) {
+  $Target = Join-Path $OutDir "ScanTreasure-iOS.ipa"
+  if ($Ipa.FullName -ne $Target) {
+    Move-Item -LiteralPath $Ipa.FullName -Destination $Target -Force
+  }
+  Write-Host " - $Target"
+}

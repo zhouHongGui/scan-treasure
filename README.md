@@ -8,9 +8,9 @@
 
 - Web/H5 应用已实现，代码位于 `web/`。
 - Android Capacitor 工程已存在，代码位于 `web/android/`，当前可以打包 Android debug APK。
-- iOS 原生工程暂未加入仓库，因此 GitHub 暂时不会产出真正的 IPA。
-- HarmonyOS 原生工程暂未加入仓库，因此 GitHub 暂时不会产出真正的 HAP/APP。
-- GitHub 会在每次推送到 `master/main` 后更新 `latest` Release，用户可以在 Releases 页面直接点击安装包下载。
+- iOS 原生工程、Apple 签名材料暂未准备，因此当前不打包 IPA。
+- HarmonyOS 原生工程、DevEco/hvigor 环境暂未准备，因此当前不打包 HAP/APP。
+- GitHub 会在每次推送到 `master/main` 后自动打包 Android，并更新 `latest` Release，用户可以在 Releases 页面直接点击 APK 下载。
 
 ## 功能
 
@@ -98,7 +98,7 @@ npm run package:android
 artifacts/android/
 ```
 
-当前本机主要支持 Android 打包。iOS 需要 macOS + Xcode + Apple 签名材料；HarmonyOS 需要 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
+当前本机和 GitHub Actions 都只启用 Android 打包。iOS 和 HarmonyOS 等准备好原生工程、签名材料与构建环境后再接入。
 
 ## GitHub 下载与自动打包
 
@@ -111,15 +111,15 @@ artifacts/android/
 
 | 平台 | 链接 |
 |---|---|
-| Android Debug APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/scan-treasure-android-debug.apk> |
+| Android Debug APK | <https://github.com/zhouHongGui/scan-treasure/releases/download/latest/ScanTreasure-Android-Debug.apk> |
 
-暂未提供直接下载的原因：
+暂未提供其它平台直接下载的原因：
 
 - Android Release APK：需要先配置 Android 签名 Secrets。
-- HarmonyOS HAP/APP：需要先补齐 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
 - iOS IPA：需要先补齐 Capacitor iOS 工程，并配置 Apple 签名材料。
+- HarmonyOS HAP/APP：需要先补齐 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。
 
-这些平台生成后会使用固定文件名上传到 Release，例如 `scan-treasure-harmony.hap`、`scan-treasure-ios.ipa`；未生成时不会提供假链接，避免点击后 404。
+这些平台未接入前不会提供假链接，避免点击后 404。
 
 自动打包配置位于：
 
@@ -131,8 +131,8 @@ artifacts/android/
 
 | 操作 | 结果 | 下载位置 |
 |---|---|---|
-| push 到 `master` / `main` | 自动构建并更新 `latest` Release | GitHub Releases 页面，可直接点击安装包 |
-| 手动运行 `Build App Downloads` | 自动构建并更新 `latest` Release | GitHub Releases 页面，可直接点击安装包 |
+| push 到 `master` / `main` | 自动构建 Android 并更新 `latest` Release | GitHub Releases 页面，可直接点击 APK |
+| 手动运行 `Build App Downloads` | 自动构建 Android 并更新 `latest` Release | GitHub Releases 页面，可直接点击 APK |
 | push `v*` 标签，例如 `v0.0.1` | 自动构建并创建/更新对应版本 Release | GitHub Releases 页面 |
 
 发布一个带下载链接的版本：
@@ -154,8 +154,8 @@ git push origin v0.0.1
 | 平台 | 当前仓库状态 | GitHub 是否能直接产出 |
 |---|---|---|
 | Android | 已有 `web/android` Capacitor 工程 | 可以产出 debug APK；配置签名后可产出 release APK |
-| iOS | 暂无 `web/ios/App` 工程 | 暂不能产出 IPA，只会生成 `ios-not-built.txt` 说明 |
-| HarmonyOS | 暂无 `web/harmony` 工程 | 暂不能产出 HAP/APP，只会生成 `harmony-not-built.txt` 说明 |
+| iOS | 暂无 `web/ios/App` 工程，暂无 Apple 签名材料 | 暂不接入自动打包 |
+| HarmonyOS | 暂无 `web/harmony` 工程，暂无 DevEco/hvigor 环境 | 暂不接入自动打包 |
 
 Android release APK 需要在 GitHub Actions Secrets 配置：
 
@@ -166,7 +166,7 @@ ANDROID_KEY_ALIAS
 ANDROID_KEY_PASSWORD
 ```
 
-iOS IPA 需要先加入 Capacitor iOS 工程，并配置 Apple 签名相关 Secrets：
+当前 GitHub Actions 未启用 iOS 打包。以后如果要生成 IPA，需要先加入 Capacitor iOS 工程，并配置 Apple 签名相关 Secrets：
 
 ```text
 APPLE_CERTIFICATE_BASE64
@@ -178,7 +178,7 @@ IOS_BUNDLE_ID
 IOS_EXPORT_METHOD
 ```
 
-HarmonyOS HAP/APP 需要先加入 HarmonyOS 原生壳工程，并按实际目录配置：
+当前 GitHub Actions 未启用 HarmonyOS 打包。以后如果要生成 HAP/APP，需要先加入 HarmonyOS 原生壳工程，并按实际目录配置：
 
 ```text
 HARMONY_PROJECT_DIR
@@ -206,7 +206,7 @@ official-site/
 | [架构决策](docs/05-架构决策-纯前端无服务器.md) | 为什么纯前端、无服务器 |
 | [法律合规与免责](docs/06-法律合规与免责.md) | 协议、商标、使用规范、免责 |
 | [PDF 工具箱与底部导航开发需求](docs/07-PDF工具箱与底部导航开发需求.md) | PDF 工具箱和底部导航规划 |
-| [多端打包与 GitHub 下载发布](docs/08-多端打包与GitHub下载发布.md) | Android / HarmonyOS / iOS 打包与 GitHub Release 下载 |
+| [多端打包与 GitHub 下载发布](docs/08-多端打包与GitHub下载发布.md) | Android 打包、GitHub Release 下载与未来多端接入说明 |
 
 ## 开源协议
 

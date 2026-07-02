@@ -20,6 +20,19 @@ if (-not $OutDir) {
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
+$StalePackageNames = @(
+  "scan-treasure-harmony.hap",
+  "scan-treasure-harmony.app",
+  "ScanTreasure-HarmonyOS.hap",
+  "ScanTreasure-HarmonyOS.app"
+)
+foreach ($Name in $StalePackageNames) {
+  $Path = Join-Path $OutDir $Name
+  if (Test-Path $Path) {
+    Remove-Item -LiteralPath $Path -Force
+  }
+}
+
 function Write-SkipNote {
   param([string]$Message)
   $Path = Join-Path $OutDir "harmony-not-built.txt"
@@ -80,7 +93,8 @@ if (-not $Packages) {
 }
 
 foreach ($Package in $Packages) {
-  Copy-Item -LiteralPath $Package.FullName -Destination (Join-Path $OutDir $Package.Name) -Force
+  $TargetName = if ($Package.Extension -eq ".hap") { "ScanTreasure-HarmonyOS.hap" } else { "ScanTreasure-HarmonyOS.app" }
+  Copy-Item -LiteralPath $Package.FullName -Destination (Join-Path $OutDir $TargetName) -Force
 }
 
 Write-Host "HarmonyOS packages:"

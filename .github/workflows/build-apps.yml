@@ -1,4 +1,4 @@
-# Build app packages for GitHub downloads.
+# Build Android app packages for GitHub downloads.
 # - Push to main/master: packages are uploaded to the "latest" GitHub Release.
 # - Push a tag like v1.0.0: packages are uploaded to that versioned GitHub Release.
 name: Build App Downloads
@@ -12,10 +12,6 @@ on:
 
 permissions:
   contents: write
-
-env:
-  HARMONY_PROJECT_DIR: ${{ vars.HARMONY_PROJECT_DIR }}
-  HARMONY_WEB_DIST_DIR: ${{ vars.HARMONY_WEB_DIST_DIR }}
 
 concurrency:
   group: app-downloads-${{ github.ref }}
@@ -80,206 +76,35 @@ jobs:
       - name: Collect Android packages
         run: |
           mkdir -p app-artifacts/android
-          find web/android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -print -exec cp {} app-artifacts/android/ \;
+          debug_apk="$(find web/android/app/build/outputs -type f -path "*/apk/debug/*.apk" | head -n 1 || true)"
+          if [ -n "$debug_apk" ]; then
+            cp "$debug_apk" app-artifacts/android/ScanTreasure-Android-Debug.apk
+          fi
+
+          release_apk="$(find web/android/app/build/outputs -type f -path "*/apk/release/*.apk" ! -name "*unsigned*" | head -n 1 || true)"
+          if [ -n "$release_apk" ]; then
+            cp "$release_apk" app-artifacts/android/ScanTreasure-Android-Release.apk
+          fi
+
+          release_aab="$(find web/android/app/build/outputs -type f -path "*/bundle/release/*.aab" | head -n 1 || true)"
+          if [ -n "$release_aab" ]; then
+            cp "$release_aab" app-artifacts/android/ScanTreasure-Android-Release.aab
+          fi
+
           test "$(find app-artifacts/android -type f | wc -l)" -gt 0
           ls -la app-artifacts/android
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scan-treasure-android
+          name: ScanTreasure-Android-Packages
           path: app-artifacts/android
-          if-no-files-found: error
-          retention-days: 30
-
-  harmony:
-    name: HarmonyOS HAP
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Detect HarmonyOS project
-        run: |
-          mkdir -p app-artifacts/harmony
-          PROJECT_DIR="${HARMONY_PROJECT_DIR:-web/harmony}"
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          if [ ! -d "$PROJECT_DIR" ]; then
-            echo "HarmonyOS project not found. Create a HarmonyOS WebView shell and set HARMONY_PROJECT_DIR before packaging." > app-artifacts/harmony/harmony-not-built.txt
-            echo "HARMONY_SKIP=1" >> "$GITHUB_ENV"
-          fi
-
-      - uses: actions/setup-node@v4
-        if: env.HARMONY_SKIP != '1'
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build web for HarmonyOS
-        if: env.HARMONY_SKIP != '1'
-        working-directory: web
-        run: |
-          npm ci
-          npm run type-check
-          npm run build
-
-      - name: Copy web dist into HarmonyOS project
-        if: env.HARMONY_SKIP != '1' && env.HARMONY_WEB_DIST_DIR != ''
-        run: |
-          mkdir -p "$HARMONY_WEB_DIST_DIR"
-          rm -rf "$HARMONY_WEB_DIST_DIR"/*
-          cp -R web/dist/. "$HARMONY_WEB_DIST_DIR"/
-
-      - name: Build HarmonyOS package
-        if: env.HARMONY_SKIP != '1'
-        run: |
-          if [ ! -f "$PROJECT_DIR/hvigorw" ]; then
-            echo "HarmonyOS hvigor wrapper not found. Open the project in DevEco Studio once or commit hvigorw." > app-artifacts/harmony/harmony-not-built.txt
-            exit 0
-          fi
-          chmod +x "$PROJECT_DIR/hvigorw"
-          (cd "$PROJECT_DIR" && ./hvigorw assembleHap --no-daemon)
-          find "$PROJECT_DIR" -type f \( -name "*.hap" -o -name "*.app" \) -print -exec cp {} app-artifacts/harmony/ \;
-          test "$(find app-artifacts/harmony -type f | wc -l)" -gt 0
-
-      - name: Upload HarmonyOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: scan-treasure-harmony
-          path: app-artifacts/harmony
-          if-no-files-found: error
-          retention-days: 30
-
-  ios:
-    name: iOS IPA
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Detect iOS project
-        run: |
-          mkdir -p app-artifacts/ios
-          if [ ! -d "web/ios/App" ]; then
-            echo "iOS Capacitor project not found. Install @capacitor/ios and run 'npx cap add ios' before packaging." > app-artifacts/ios/ios-not-built.txt
-            echo "IOS_SKIP=1" >> "$GITHUB_ENV"
-          fi
-
-      - uses: actions/setup-node@v4
-        if: env.IOS_SKIP != '1'
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install Apple signing assets
-        if: env.IOS_SKIP != '1'
-        env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
-        run: |
-          if [ -z "$APPLE_CERTIFICATE_BASE64" ] || [ -z "$APPLE_CERTIFICATE_PASSWORD" ] || [ -z "$APPLE_PROVISION_PROFILE_BASE64" ] || [ -z "$IOS_PROVISIONING_PROFILE_NAME" ]; then
-            echo "iOS IPA was not built because Apple signing secrets are not configured." > app-artifacts/ios/ios-not-built.txt
-            echo "IOS_SKIP=1" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          decode_base64() {
-            if echo "$1" | base64 --decode > "$2" 2>/dev/null; then
-              return 0
-            fi
-            echo "$1" | base64 -D > "$2"
-          }
-
-          CERTIFICATE_PATH="$RUNNER_TEMP/ios-signing.p12"
-          PROFILE_PATH="$RUNNER_TEMP/ios-profile.mobileprovision"
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-
-          decode_base64 "$APPLE_CERTIFICATE_BASE64" "$CERTIFICATE_PATH"
-          decode_base64 "$APPLE_PROVISION_PROFILE_BASE64" "$PROFILE_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
-
-      - name: Build iOS IPA
-        if: env.IOS_SKIP != '1'
-        working-directory: web
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-          IOS_EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
-        run: |
-          if [ -z "$APPLE_TEAM_ID" ] || [ -z "$IOS_PROVISIONING_PROFILE_NAME" ]; then
-            echo "iOS IPA was not built because APPLE_TEAM_ID or IOS_PROVISIONING_PROFILE_NAME is missing." > ../app-artifacts/ios/ios-not-built.txt
-            exit 0
-          fi
-
-          npm ci
-          npm run type-check
-          npm run build
-          npx cap sync ios
-
-          BUNDLE_ID="${IOS_BUNDLE_ID:-com.smartscan.app}"
-          EXPORT_METHOD="${IOS_EXPORT_METHOD:-ad-hoc}"
-          cat > ../app-artifacts/ios/ExportOptions.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>$EXPORT_METHOD</string>
-            <key>teamID</key>
-            <string>$APPLE_TEAM_ID</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>$BUNDLE_ID</key>
-              <string>$IOS_PROVISIONING_PROFILE_NAME</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
-
-          xcodebuild \
-            -workspace ios/App/App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath ../app-artifacts/ios/ScanTreasure.xcarchive \
-            archive \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME"
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath ../app-artifacts/ios/ScanTreasure.xcarchive \
-            -exportPath ../app-artifacts/ios \
-            -exportOptionsPlist ../app-artifacts/ios/ExportOptions.plist
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: scan-treasure-ios
-          path: |
-            app-artifacts/ios/*.ipa
-            app-artifacts/ios/ios-not-built.txt
           if-no-files-found: error
           retention-days: 30
 
   github-release:
     name: GitHub Release downloads
-    needs: [android, harmony, ios]
+    needs: [android]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -290,41 +115,7 @@ jobs:
       - name: Prepare stable download assets
         run: |
           mkdir -p release-upload
-
-          debug_apk="$(find release-artifacts -type f -name "*debug*.apk" | head -n 1 || true)"
-          if [ -n "$debug_apk" ]; then
-            cp "$debug_apk" release-upload/scan-treasure-android-debug.apk
-          fi
-
-          release_apk="$(find release-artifacts -type f -name "*release*.apk" ! -name "*unsigned*" | head -n 1 || true)"
-          if [ -n "$release_apk" ]; then
-            cp "$release_apk" release-upload/scan-treasure-android-release.apk
-          fi
-
-          release_aab="$(find release-artifacts -type f -name "*release*.aab" | head -n 1 || true)"
-          if [ -n "$release_aab" ]; then
-            cp "$release_aab" release-upload/scan-treasure-android-release.aab
-          fi
-
-          ios_ipa="$(find release-artifacts -type f -name "*.ipa" | head -n 1 || true)"
-          if [ -n "$ios_ipa" ]; then
-            cp "$ios_ipa" release-upload/scan-treasure-ios.ipa
-          fi
-
-          harmony_hap="$(find release-artifacts -type f -name "*.hap" | head -n 1 || true)"
-          if [ -n "$harmony_hap" ]; then
-            cp "$harmony_hap" release-upload/scan-treasure-harmony.hap
-          fi
-
-          harmony_app="$(find release-artifacts -type f -name "*.app" | head -n 1 || true)"
-          if [ -n "$harmony_app" ]; then
-            cp "$harmony_app" release-upload/scan-treasure-harmony.app
-          fi
-
-          while IFS= read -r marker; do
-            cp "$marker" "release-upload/$(basename "$marker")"
-          done < <(find release-artifacts -type f -name "*-not-built.txt")
-
+          find release-artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*-not-built.txt" \) -print -exec cp {} release-upload/ \;
           test "$(find release-upload -type f | wc -l)" -gt 0
           ls -la release-upload
 
@@ -345,31 +136,22 @@ jobs:
           ASSET_BASE="https://github.com/zhouHongGui/scan-treasure/releases/download/$TAG_NAME"
 
           {
-            echo "扫描宝多端下载包（$RELEASE_KIND）。"
+            echo "扫描宝 Android 下载包（$RELEASE_KIND）。"
             echo
             echo "直接下载链接："
-            if [ -f release-upload/scan-treasure-android-debug.apk ]; then
-              echo "- Android Debug APK：$ASSET_BASE/scan-treasure-android-debug.apk"
+            if [ -f release-upload/ScanTreasure-Android-Debug.apk ]; then
+              echo "- Android Debug APK：$ASSET_BASE/ScanTreasure-Android-Debug.apk"
             fi
-            if [ -f release-upload/scan-treasure-android-release.apk ]; then
-              echo "- Android Release APK：$ASSET_BASE/scan-treasure-android-release.apk"
+            if [ -f release-upload/ScanTreasure-Android-Release.apk ]; then
+              echo "- Android Release APK：$ASSET_BASE/ScanTreasure-Android-Release.apk"
             else
               echo "- Android Release APK：暂未生成，需要配置 Android 签名 Secrets。"
             fi
-            if [ -f release-upload/scan-treasure-harmony.hap ]; then
-              echo "- HarmonyOS HAP：$ASSET_BASE/scan-treasure-harmony.hap"
-            elif [ -f release-upload/scan-treasure-harmony.app ]; then
-              echo "- HarmonyOS APP：$ASSET_BASE/scan-treasure-harmony.app"
-            else
-              echo "- HarmonyOS：暂未生成，需要先提交 HarmonyOS 原生工程和 DevEco/hvigor 构建环境。"
-            fi
-            if [ -f release-upload/scan-treasure-ios.ipa ]; then
-              echo "- iOS IPA：$ASSET_BASE/scan-treasure-ios.ipa"
-            else
-              echo "- iOS IPA：暂未生成，需要先提交 Capacitor iOS 工程并配置 Apple 签名材料。"
+            if [ -f release-upload/ScanTreasure-Android-Release.aab ]; then
+              echo "- Android Release AAB：$ASSET_BASE/ScanTreasure-Android-Release.aab"
             fi
             echo
-            echo "说明：Release 附件中只会出现本次实际构建出的安装包；未生成的平台不会提供假链接。"
+            echo "说明：当前自动发布只启用 Android。iOS 和 HarmonyOS 需要对应原生工程与签名/构建环境，暂不生成安装包。"
           } > release-notes.md
 
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
@@ -379,6 +161,12 @@ jobs:
           fi
 
           known_assets=(
+            ScanTreasure-Android-Debug.apk
+            ScanTreasure-Android-Release.apk
+            ScanTreasure-Android-Release.aab
+            ScanTreasure-HarmonyOS.hap
+            ScanTreasure-HarmonyOS.app
+            ScanTreasure-iOS.ipa
             scan-treasure-android-debug.apk
             scan-treasure-android-release.apk
             scan-treasure-android-release.aab
